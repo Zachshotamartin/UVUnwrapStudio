@@ -1,0 +1,4 @@
+[
+  {"file":"01.png","caption":"Cylinder charts solved with LSCM and painted through their actual surface-to-UV mapping.","alt":"A checker-textured cylinder with terracotta brush strokes on the top and curved side, alongside its flattened UV atlas.","steps":["Load Cylinder","Clear seams and verify that the closed chart is rejected","Restore suggested seams and solve three charts","Paint a terracotta line on the atlas and a stroke on the 3D cylinder"]},
+  {"file":"02.png","caption":"Six cube charts retain their own seams and share one paintable texture atlas.","alt":"A checker-textured cube with cobalt paint and visible seam edges, alongside six square UV charts.","steps":["Load Cube","Select cobalt ink","Paint across the atlas","Switch to Seams to inspect the mapped cube edges"]}
+]
