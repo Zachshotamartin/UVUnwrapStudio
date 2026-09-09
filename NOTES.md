@@ -1,0 +1,3 @@
+Node tests: npm test. Six tests cover exact cube chart count/stretch, rejection of closed charts, seam-dependent connectivity, cylinder strip/caps, and the folded ribbon. Browser checks should select Paint and draw on the cylinder, then verify atlas and object change; toggle a seam, unwrap, and export PNG/OBJ. No Actions added.
+
+The sixth test verifies spherical brush footprints cross separate UV seam charts. Chromium verified invalid seam rejection, chart regeneration, 3D and atlas painting both modifying the shared texture, OBJ/PNG downloads and 390px scrolling/overflow. Actual viewport examples and exact steps are in examples/manifest.json.
