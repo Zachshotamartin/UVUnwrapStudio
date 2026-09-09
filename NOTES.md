@@ -1,3 +1,5 @@
 Node tests: npm test. Six tests cover exact cube chart count/stretch, rejection of closed charts, seam-dependent connectivity, cylinder strip/caps, and the folded ribbon. Browser checks should select Paint and draw on the cylinder, then verify atlas and object change; toggle a seam, unwrap, and export PNG/OBJ. No Actions added.
 
 The sixth test verifies spherical brush footprints cross separate UV seam charts. Chromium verified invalid seam rejection, chart regeneration, 3D and atlas painting both modifying the shared texture, OBJ/PNG downloads and 390px scrolling/overflow. Actual viewport examples and exact steps are in examples/manifest.json.
+
+Cached-workspace regression: the original implementation failed after switching away during a surface stroke, with controls.enabled remaining false. The fixed version tracks pointer IDs for both painting surfaces, ends captures on deactivate/cancel/lostcapture/blur, and preserves committed pixels. npm run test:browser reproduces the lifecycle sequence against the pinned runtime and verifies real texture data plus desktop and touch controls.

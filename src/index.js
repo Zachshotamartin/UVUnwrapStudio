@@ -196,9 +196,10 @@ export function createExperiment(ctx) {
     ["Seams", "Paint"],
     mode,
     (v) => {
+      endPainting();
       mode = v;
       line.visible = v === "Seams";
-      ctx.controls.enabled = true;
+      updateCursor();
       ctx.invalidate();
     },
   );
@@ -309,35 +310,78 @@ export function createExperiment(ctx) {
     drawAtlas();
     ctx.invalidate();
   }
-  let painting = false,
+  let surfacePointer = null,
+    atlasPointer = null,
+    restoreControls = null,
     down = null;
-  ctx.listen(ctx.canvas, "pointerdown", (e) => {
-    down = [e.clientX, e.clientY];
-    if (mode === "Paint") {
-      const hit = ctx.pick(e, [object])[0];
-      if (hit?.uv) {
-        painting = true;
-        ctx.controls.enabled = false;
-        ctx.canvas.setPointerCapture(e.pointerId);
-        surfacePaint(hit);
-      }
+  function updateCursor() {
+    ctx.canvas.style.cursor = mode === "Paint" ? "crosshair" : "";
+  }
+  // Strokes already drawn into the texture remain committed. Only transient
+  // input ownership ends when a pointer is canceled or this tool is hidden.
+  function endPainting() {
+    const surface = surfacePointer,
+      flat = atlasPointer;
+    surfacePointer = atlasPointer = null;
+    down = null;
+    if (restoreControls !== null) {
+      ctx.controls.enabled = restoreControls;
+      restoreControls = null;
     }
-  });
-  ctx.listen(ctx.canvas, "pointermove", (e) => {
-    if (painting) {
-      const hit = ctx.pick(e, [object])[0];
-      if (hit?.uv) surfacePaint(hit);
-    }
-  });
-  ctx.listen(window, "pointerup", () => {
-    if (painting) {
-      painting = false;
-      ctx.controls.enabled = true;
+    if (surface !== null && ctx.canvas.hasPointerCapture(surface))
+      ctx.canvas.releasePointerCapture(surface);
+    if (flat !== null && atlas.hasPointerCapture(flat))
+      atlas.releasePointerCapture(flat);
+  }
+  const release = (event) => {
+    if (event.pointerId !== surfacePointer && event.pointerId !== atlasPointer)
+      return;
+    endPainting();
+    if (event.type === "pointerup")
       ctx.setStatus(
         "Texture painted. Export the PNG atlas with the OBJ to keep it.",
       );
-    }
-  });
+  };
+  ctx.listen(
+    ctx.canvas,
+    "pointerdown",
+    (e) => {
+      if (e.button !== 0 || !e.isPrimary) return;
+      down = [e.clientX, e.clientY];
+      if (mode !== "Paint") return;
+      const hit = ctx.pick(e, [object])[0];
+      if (!hit?.uv) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      endPainting();
+      surfacePointer = e.pointerId;
+      restoreControls = ctx.controls.enabled;
+      ctx.controls.enabled = false;
+      ctx.canvas.setPointerCapture(e.pointerId);
+      surfacePaint(hit);
+    },
+    { capture: true },
+  );
+  ctx.listen(
+    ctx.canvas,
+    "pointermove",
+    (e) => {
+      if (surfacePointer !== e.pointerId) return;
+      if (e.buttons === 0) {
+        endPainting();
+        return;
+      }
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const hit = ctx.pick(e, [object])[0];
+      if (hit?.uv) surfacePaint(hit);
+    },
+    { capture: true },
+  );
+  for (const event of ["pointerup", "pointercancel"])
+    ctx.listen(window, event, release, { capture: true });
+  ctx.listen(ctx.canvas, "lostpointercapture", release);
+  ctx.listen(window, "blur", endPainting);
   ctx.listen(ctx.canvas, "click", (e) => {
     if (
       mode !== "Seams" ||
@@ -372,30 +416,45 @@ export function createExperiment(ctx) {
       `Edge ${selected + 1} selected. ${seams.has(best) ? "It is a seam." : "It is currently joined."}`,
     );
   });
-  let atlasPaint = false;
   const paintAt = (e) => {
     const r = atlas.getBoundingClientRect();
     paint((e.clientX - r.left) / r.width, 1 - (e.clientY - r.top) / r.height);
   };
   ctx.listen(atlas, "pointerdown", (e) => {
-    atlasPaint = true;
+    if (e.button !== 0 || !e.isPrimary) return;
+    e.preventDefault();
+    endPainting();
+    atlasPointer = e.pointerId;
     atlas.setPointerCapture(e.pointerId);
     paintAt(e);
   });
   ctx.listen(atlas, "pointermove", (e) => {
-    if (atlasPaint) paintAt(e);
+    if (atlasPointer !== e.pointerId) return;
+    if (e.buttons === 0) {
+      endPainting();
+      return;
+    }
+    paintAt(e);
   });
-  ctx.listen(atlas, "pointerup", () => {
-    atlasPaint = false;
-  });
+  ctx.listen(atlas, "lostpointercapture", release);
   resetPaint();
   rebuild();
   ctx.fit();
   ctx.setStatus(
     "Three charts unwrap the cylinder. Mark seams, solve, then paint on either view.",
   );
+  updateCursor();
   return {
+    deactivate() {
+      endPainting();
+      ctx.canvas.style.cursor = "";
+    },
+    activate() {
+      updateCursor();
+    },
     dispose() {
+      endPainting();
+      ctx.canvas.style.cursor = "";
       texture.dispose();
     },
   };
