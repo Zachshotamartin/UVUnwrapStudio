@@ -36,10 +36,16 @@ npm run dev
 
 ![A checker-textured cylinder with terracotta brush strokes on the top and curved side, alongside its flattened UV atlas.](examples/01.png)
 
-Cylinder charts solved with LSCM and painted through their actual surface-to-UV mapping..
+Cylinder charts solved with LSCM and painted through their actual surface-to-UV mapping.
 
 ![A checker-textured cube with cobalt paint and visible seam edges, alongside six square UV charts.](examples/02.png)
 
-Six cube charts retain their own seams and share one paintable texture atlas..
+Six cube charts retain their own seams and share one paintable texture atlas.
 
 Exact reproduction steps are recorded in [the example manifest](examples/manifest.json).
+
+## Input lifecycle checks
+
+Surface and atlas strokes stop on pointer cancellation, lost capture, browser blur, or switching tools. Already-painted pixels remain; returning to the cached tool restores its paint mode, camera controls, seam selection, and texture. Surface painting captures primary input before orbit controls handle it, so brushing does not also start a camera drag.
+
+Run `npx playwright install chromium` once, then `npm run test:browser`. The browser regression checks actual atlas pixels before and after painting, cached tool switches during both kinds of stroke, capture release, no painting from hover after returning, pointer cancellation, and real touch input at 390px.

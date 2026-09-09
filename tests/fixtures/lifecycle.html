@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="UTF-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>UV lifecycle regression</title>
+  <body>
+    <main><div id="lab"></div></main>
+    <script type="module">
+      import { mountLab } from "@zachshotamartin/graphics-workbench";
+      import "@zachshotamartin/graphics-workbench/style.css";
+      import { createExperiment } from "../../src/index.js";
+      window.lab = mountLab(
+        document.querySelector("#lab"),
+        (ctx) => {
+          window.uvContext = ctx;
+          window.uvTool = createExperiment(ctx);
+          return window.uvTool;
+        },
+        { key: "uv" },
+      );
+      window.switchAway = () =>
+        window.lab.switchExperiment("other", (ctx) => {
+          ctx.root.add(
+            new ctx.THREE.Mesh(
+              new ctx.THREE.BoxGeometry(),
+              new ctx.THREE.MeshStandardMaterial(),
+            ),
+          );
+          ctx.setStatus("Other tool");
+          return {};
+        });
+      window.switchBack = () =>
+        window.lab.switchExperiment("uv", () => {
+          throw new Error("Must preserve cached UV tool");
+        });
+    </script>
+  </body>
+</html>
